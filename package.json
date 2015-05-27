@@ -1,0 +1,36 @@
+{
+  "name": "bacon.circuit",
+  "version": "0.1.0",
+  "description": "Bacon.js plugin for easily constructing stateful software components as a set of interconnected observables",
+  "scripts": {
+    "test": "./node_modules/karma/bin/karma start",
+    "build": "./node_modules/.bin/gulp"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bangjs/bacon.circuit.git"
+  },
+  "keywords": [
+    "bacon",
+    "Bacon.js",
+    "frp",
+    "reactive"
+  ],
+  "author": "Tim Molendijk <tim@timmolendijk.nl>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bangjs/bacon.circuit/issues"
+  },
+  "homepage": "https://github.com/bangjs/bacon.circuit#readme",
+  "devDependencies": {
+    "baconjs": "^0.7.59",
+    "gulp": "^3.8.11",
+    "gulp-concat": "^2.5.2",
+    "karma": "^0.12.32",
+    "karma-mocha": "^0.1.10",
+    "karma-sinon-chai": "^0.3.0",
+    "lodash": "^3.9.2",
+    "mocha": "^2.2.5",
+    "q": "^1.4.1"
+  }
+}
