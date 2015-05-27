@@ -1,4 +1,7 @@
-;!function (Bacon) { 'use strict';
+if (typeof exports === 'object')
+	Bacon = require('baconjs');
+
+;!function () { 'use strict';
 
 function Circuit(face) {
 	// Calling without arguments can be done if we want to skip initialization
@@ -146,8 +149,8 @@ function flattenArray(array) {
 
 Bacon.Circuit = Circuit;
 
-}(window.Bacon);
-;!function (Bacon) { 'use strict';
+}();
+;!function () { 'use strict';
 
 function Field(setup, Type) {
 	var bus = new Bacon.Bus();
@@ -242,4 +245,4 @@ Field.property.watch = function (merge) {
 
 Bacon.Field = Field;
 
-}(window.Bacon);
+}();

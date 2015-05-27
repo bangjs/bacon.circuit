@@ -1,4 +1,4 @@
-;!function (Bacon) { 'use strict';
+;!function () { 'use strict';
 
 function Field(setup, Type) {
 	var bus = new Bacon.Bus();
@@ -93,4 +93,4 @@ Field.property.watch = function (merge) {
 
 Bacon.Field = Field;
 
-}(window.Bacon);
+}();

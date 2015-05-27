@@ -5,6 +5,7 @@ var gulp = require('gulp'),
 gulp.task('js', function () {
 
 	return gulp.src([
+		'src/core.js',
 		'src/circuit.js',
 		'src/field.js'
 	]).pipe(

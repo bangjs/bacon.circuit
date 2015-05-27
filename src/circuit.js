@@ -1,4 +1,4 @@
-;!function (Bacon) { 'use strict';
+;!function () { 'use strict';
 
 function Circuit(face) {
 	// Calling without arguments can be done if we want to skip initialization
@@ -146,4 +146,4 @@ function flattenArray(array) {
 
 Bacon.Circuit = Circuit;
 
-}(window.Bacon);
+}();
