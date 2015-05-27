@@ -26,8 +26,23 @@ var ENDPOINT = '/my-api-endpoint';
 
 new Bacon.Circuit(module.exports, {
 	
-	order: Bacon.Field.property.watch(function () {
-		return Bacon.once('ASC');
+	config: {
+		
+		order: Bacon.Field.property.watch(function () {
+			return Bacon.once('ASC');
+		}),
+		
+		searchTerm: Bacon.Field.property.watch(function () {
+			return Bacon.once("");
+		})
+		
+	},
+	
+	issueQuery: Bacon.Field.stream(function () {
+		return Bacon.combineTemplate({
+			order: this.config.order,
+			q: this.config.searchTerm.debounce(200)
+		});
 	}),
 	
 	items: Bacon.Field.property.digest(function () {
@@ -35,11 +50,11 @@ new Bacon.Circuit(module.exports, {
 	}),
 	
 	observeItems: Bacon.Field.property.expose(function () {
-		return this.order.combine(
-			Bacon.mergeAll(this.create, this.update, this.delete).startWith(true),
-			function (order) {
-				return { order: order };
-			}
+		return Bacon.combineWith(
+			function (params) {
+				return params;
+			}, this.issueQuery,
+			Bacon.mergeAll(this.create, this.update, this.delete).startWith(true)
 		).flatMapLatest(function (params) {
 			return Bacon.fromNodeCallback(
 				request.get(ENDPOINT).query(params).end
@@ -77,8 +92,9 @@ Now we can use this module as follows:
 ```js
 var ds = require('./mydatasource.js');
 
-// Assignable property that is being watched by our data source component.
-ds.order = 'DESC';
+// Changing this property (and `config.searchTerm`) triggers that items will be
+// refetched from server.
+ds.config.order = 'DESC';
 
 // Function that returns a promise (same for `update` and `delete`).
 ds.create({ id: 42, name: "Tim" }).done(function (response) {
@@ -87,7 +103,8 @@ ds.create({ id: 42, name: "Tim" }).done(function (response) {
 	// ...
 });
 
-// This value is assigned asynchronously, so not guaranteed to exist at this point.
+// This value is assigned asynchronously, so not guaranteed to exist at this
+// point.
 if (ds.items === undefined)
 	console.log("still loading items...");  
 
@@ -99,6 +116,8 @@ ds.observeItems.
 	onError(function (err) {
 		// ...
 	});
+
+// Note that `ds.issueQuery` does not exist.
 ```
 
 
@@ -108,6 +127,6 @@ Known to work with Bacon.js v0.7.59.
 
 Bacon.Circuit was created by [Tim Molendijk](https://twitter.com/timmolendijk) as a building block of the [BangJS](http://bangjs.org) _Bacon-flavored Angular_ front-end application framework. It is currently in production use at [Nouncy](http://nouncy.com).
 
-Contributing to Bacon.Circuit is encouraged. I would love to hear about your use case. Feel free to [email me](https://github.com/bangjs/bacon.circuit/blob/master/package.json#L19) or send in issues or pull requests.
+Contributing to Bacon.Circuit is encouraged. I would love to hear about your use case. Feel free to [email me](https://github.com/bangjs/bacon.circuit/blob/master/package.json#L20) or send in issues or pull requests.
 
 Bacon.Circuit has been published under [MIT license](http://timmolendijk.mit-license.org/) and its release history [has been documented here](https://github.com/bangjs/bacon.circuit/blob/master/CHANGES.md).

@@ -2,6 +2,7 @@
   "name": "bacon.circuit",
   "version": "0.1.0",
   "description": "Bacon.js plugin for easily constructing stateful software components as a set of interconnected observables",
+  "main": "dist/bacon.circuit.js",
   "scripts": {
     "test": "./node_modules/karma/bin/karma start",
     "build": "./node_modules/.bin/gulp"
