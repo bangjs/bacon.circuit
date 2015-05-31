@@ -13,12 +13,14 @@ describe('Bacon.Field', function () {
 		
 	});
 	
-	it("delivers observable that never automatically ends", function () {
+	it("delivers observable that never automatically ends", function (done) {
 		
 		var field = new Bacon.Field(function () {
 			return Bacon.once(true);
 		}).start().observable().subscribe(function (event) {
 			assert(!event.isEnd() && event.value() === true);
+			
+			done();
 		});
 		
 	});
@@ -38,7 +40,7 @@ describe('Bacon.Field', function () {
 		
 	});
 	
-	it("calls setup with the parameters that were provided upon start", function () {
+	it("calls setup with the parameters that were provided upon start", function (done) {
 		
 		var a = {}, b = 'b', c = true;
 		
@@ -46,13 +48,15 @@ describe('Bacon.Field', function () {
 			expect(this).to.equal(a);
 			expect(name).to.equal(b);
 			expect(circuit).to.equal(c);
+			
+			done();
 		});
 		
 		field.start(a, b, c);
 		
 	});
 	
-	it("dismisses setup return value if not an observable of any sort", function () {
+	it("dismisses setup return value if not an observable of any sort", function (done) {
 		
 		Bacon.mergeAll(
 			new Bacon.Field(function () {
@@ -61,6 +65,8 @@ describe('Bacon.Field', function () {
 			Bacon.once('first')
 		).onValue(function (value) {
 			expect(value).to.equal('first');
+			
+			done();
 		});
 		
 	});
@@ -69,12 +75,14 @@ describe('Bacon.Field', function () {
 
 describe("Bacon.Field.stream.expose", function () {
 	
-	it("assigns stream observable to circuit upon setup", function () {
+	it("assigns stream observable to circuit upon setup", function (done) {
 		
 		var field = Bacon.Field.stream.expose(function (name) {
 			expect(circuit.set).
 				to.have.been.calledOnce.
 				to.have.been.calledWithExactly(name, field.observable());
+			
+			done();
 		});
 		
 		var circuit = {
@@ -88,34 +96,41 @@ describe("Bacon.Field.stream.expose", function () {
 
 describe("Bacon.Field.stream.function", function () {
 	
-	it("assigns function to circuit upon setup", function () {
+	it("assigns function to circuit upon setup", function (done) {
 		
 		Bacon.Field.stream.function().
 		start({}, 'propName', {
 			set: function (name, fn) {
 				expect(fn).to.be.a.function;
 				expect(fn()).to.be.undefined;
+				
+				done();
 			}
-		});
+		}).
+		observable().
+		subscribe(_.noop);
 		
 	});
 	
-	it("returns a promise with event value from a function call if a promise constructor is provided", function () {
+	it("returns a promise with event value from a function call if a promise constructor is provided", function (done) {
 		
 		Bacon.Field.stream.function().
 		start({}, 'propName', {
 			set: function (name, fn) {
-				expect(fn()).to.be.instanceof(Q.Promise);
+				assert(Q.isPromise(fn()));
+				
+				done();
 			},
 			promiseConstructor: Q.Promise
-		});
+		}).
+		observable().
+		subscribe(_.noop);
 		
 	});
-
-	it("captures every invocation of the function as a stream event", function () {
+	
+	it("captures every invocation of the function as a stream event", function (done) {
 		
-		var invoke,
-			onValue = sinon.spy();
+		var invoke;
 		
 		var stream = Bacon.Field.stream.function().
 			start({}, 'propName', {
@@ -126,18 +141,21 @@ describe("Bacon.Field.stream.function", function () {
 			observable();
 		
 		expect(invoke).to.be.undefined;
-		stream.onValue(onValue);
-		expect(onValue).to.have.not.been.called;
-
-		invoke();		
-		expect(onValue).to.have.been.callOnce;
 		
-		invoke();
-		expect(onValue).to.have.been.calledTwice;
+		stream.onValue(function (value) {
+			expect(value).to.be.arguments;
+			expect(_.toArray(value)).to.deep.equal([1, 2, 3]);
+			
+			done();
+		});
+		
+		expect(invoke).to.be.a.function;
+		
+		invoke(1, 2, 3);
 		
 	});
 	
-	it("can amend the result of the invocation using a `flatMapLatest` operation", function () {
+	it("can amend the result of the invocation using a `flatMapLatest` operation", function (done) {
 		
 		var onValue = sinon.spy();
 		
@@ -157,14 +175,20 @@ describe("Bacon.Field.stream.function", function () {
 			}
 		}).
 		observable().
-		onValue(onValue);
-		
-		expect(onValue.firstCall).to.have.been.calledWithExactly(1*1 + 2*2 + 3*3);
-		expect(onValue.secondCall).to.have.been.calledWithExactly(1 + 2 + 3);
+		onValue(function () {
+			onValue.apply(this, arguments);
+			
+			if (onValue.calledTwice) {
+				expect(onValue.firstCall).to.have.been.calledWithExactly(1*1 + 2*2 + 3*3);
+				expect(onValue.secondCall).to.have.been.calledWithExactly(1 + 2 + 3);
+				
+				done();
+			}
+		});
 		
 	});
 	
-	it("resolves promise with first event after invocation", function () {
+	it("resolves promise with first event after invocation", function (done) {
 		
 		Bacon.Field.stream.function(function (arg) {
 			return Bacon.fromArray([arg, !arg]);
@@ -173,12 +197,14 @@ describe("Bacon.Field.stream.function", function () {
 			set: function (name, fn) {
 				fn(true).done(function (value) {
 					expect(value).to.be.true;
+					
+					done();
 				});
 			},
 			promiseConstructor: Q.Promise
 		}).
 		observable().
-		onValue(_.noop);
+		subscribe(_.noop);
 		
 	});
 	
@@ -238,7 +264,7 @@ describe("Bacon.Field.stream.function", function () {
 		
 	});
 	
-	it("is the actual invocation that triggers the drop of pending events, rather than the resulting event (if any)", function (done) {
+	it("drops pending events as soon as the actual invocation takes place, rather than the resulting event (if any)", function (done) {
 		
 		var onValue = sinon.spy();
 		
@@ -292,29 +318,25 @@ describe("Bacon.Field.property.digest", function () {
 
 describe("Bacon.Field.property.watch", function () {
 	
-	it("watches and reports changes of value on circuit", function () {
-		
-		var onValue = sinon.spy();
+	it("watches and reports changes of value on circuit", function (done) {
 		
 		Bacon.Field.property.watch().
 		start({}, 'propName', {
 			watch: function (name, cb) {
 				cb(1);
-				cb(2);
 			},
 			set: function () {}
 		}).
 		observable().
-		onValue(onValue);
-		
-		expect(onValue.firstCall).to.have.been.calledWithExactly(1);
-		expect(onValue.secondCall).to.have.been.calledWithExactly(2);
+		onValue(function (value) {
+			expect(value).to.equal(1);
+			
+			done();
+		});
 		
 	});
 	
-	it("will merge the provided observable before the watch stream", function () {
-		
-		var onValue = sinon.spy();
+	it("will merge the provided observable before the watch stream", function (done) {
 		
 		Bacon.Field.property.watch(function () {
 			return Bacon.once(1);
@@ -326,10 +348,11 @@ describe("Bacon.Field.property.watch", function () {
 			set: function () {}
 		}).
 		observable().
-		onValue(onValue);
-		
-		expect(onValue.firstCall).to.have.been.calledWithExactly(1);
-		expect(onValue.secondCall).to.have.been.calledWithExactly(2);
+		onValue(function (value) {
+			expect(value).to.equal(1);
+			
+			done();
+		});
 		
 	});
 	
@@ -355,7 +378,7 @@ describe("Bacon.Field.property.watch", function () {
 		
 	});
 	
-	it("will only issue events for actual value changes", function () {
+	it("will only issue events for actual value changes", function (done) {
 		
 		var onValue = sinon.spy();
 		
@@ -376,14 +399,20 @@ describe("Bacon.Field.property.watch", function () {
 			set: function () {}
 		}).
 		observable().
-		onValue(onValue);
-		
-		expect(onValue.getCall(0)).to.have.been.calledWithExactly(undefined);
-		expect(onValue.getCall(1)).to.have.been.calledWithExactly(1);
-		expect(onValue.getCall(2)).to.have.been.calledWithExactly(2);
-		expect(onValue.getCall(3)).to.have.been.calledWithExactly(1);
-		expect(onValue.getCall(4)).to.have.been.calledWithExactly(o1);
-		expect(onValue.getCall(5)).to.have.been.calledWithExactly(o2);
+		onValue(function () {
+			onValue.apply(this, arguments);
+			
+			if (onValue.callCount === 6) {
+				expect(onValue.getCall(0)).to.have.been.calledWithExactly(undefined);
+				expect(onValue.getCall(1)).to.have.been.calledWithExactly(1);
+				expect(onValue.getCall(2)).to.have.been.calledWithExactly(2);
+				expect(onValue.getCall(3)).to.have.been.calledWithExactly(1);
+				expect(onValue.getCall(4)).to.have.been.calledWithExactly(o1);
+				expect(onValue.getCall(5)).to.have.been.calledWithExactly(o2);
+				
+				done();
+			}
+		});
 		
 	});
 	

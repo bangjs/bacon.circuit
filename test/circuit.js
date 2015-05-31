@@ -16,25 +16,50 @@ describe('Bacon.Circuit', function () {
 		
 	});
 	
-	it("instantiates all observables before starting any of them", function () {
+	it("instantiates all observables before starting any of them", function (done) {
+		
+		var count = 0;
 		
 		new Bacon.Circuit({}, {
 			a: new Bacon.Field(function () {
 				expect(this.b).to.be.instanceof(Bacon.Observable);
+				
+				if (++count === 2) done();
 			}),
 			b: new Bacon.Field(function () {
 				expect(this.a).to.be.instanceof(Bacon.Observable);
+				
+				if (++count === 2) done();
 			})
 		});
 		
 	});
-	
-	it("takes in one to many field definition objects", function () {
+
+	it("subscribes to all observables simultaneously, preserving all initial event stream events", function (done) {
+		
+		new Bacon.Circuit({}, {
+			a: new Bacon.Field(function () {
+				return Bacon.once(1);
+			}, Bacon.EventStream),
+			b: new Bacon.Field(function () {
+				return this.a.doAction(function (value) {
+					expect(value).to.equal(1);
+					
+					done();
+				});
+			}, Bacon.EventStream)
+		});
+		
+	});
+		
+	it("takes in one to many field definition objects", function (done) {
 		
 		new Bacon.Circuit({}, {
 			a: new Bacon.Field(function () {
 				expect(this.a).to.be.instanceof(Bacon.Observable);
 				expect(this.b).to.be.instanceof(Bacon.Observable);
+				
+				done();
 			})
 		}, {
 			b: new Bacon.Field(_.noop)
@@ -42,13 +67,15 @@ describe('Bacon.Circuit', function () {
 		
 	});
 	
-	it("flattens the supplied list of field definition objects", function () {
+	it("flattens the supplied list of field definition objects", function (done) {
 		
 		new Bacon.Circuit({}, [{
 			a: new Bacon.Field(function () {
 				expect(this.a).to.be.instanceof(Bacon.Observable);
 				expect(this.b).to.be.instanceof(Bacon.Observable);
 				expect(this.c).to.be.instanceof(Bacon.Observable);
+				
+				done();
 			})
 		}, [{
 			b: new Bacon.Field(_.noop)
@@ -58,12 +85,14 @@ describe('Bacon.Circuit', function () {
 		
 	});
 	
-	it("deep merges multiple field definition objects", function () {
+	it("deeply merges multiple field definition objects", function (done) {
 		
 		new Bacon.Circuit({}, {
 			a: new Bacon.Field(function () {
 				expect(this.nested.x).to.be.instanceof(Bacon.Observable);
 				expect(this.nested.y).to.be.instanceof(Bacon.Observable);
+				
+				done();
 			}),
 			nested: {
 				x: new Bacon.Field(_.noop)
@@ -76,20 +105,22 @@ describe('Bacon.Circuit', function () {
 		
 	});
 	
-	it("has an `onEvent` method that is called for every event", function () {
-		
-		var onEvent = sinon.spy(Bacon.Circuit.prototype, 'onEvent');
+	it("has an `onEvent` method that is called for every event", function (done) {
 		
 		var field = new Bacon.Field(function () {
 			return Bacon.once('!');
 		});
-		new Bacon.Circuit({}, {
+		var circuit = new Bacon.Circuit({}, {
 			field: field
 		});
 		
-		expect(onEvent).to.be.calledWith('field', field.observable(), sinon.match(function (event) {
-			return event.hasValue() && event.value() === '!';
-		}));
+		circuit.onEvent = function (name, observable, event) {
+			expect(name).to.equal('field');
+			expect(observable).to.equal(field.observable());
+			assert(event.hasValue && event.value() === '!');
+			
+			done();
+		};
 		
 	});
 	
@@ -97,11 +128,14 @@ describe('Bacon.Circuit', function () {
 		
 		var circuit = new Bacon.Circuit({}, {});
 		
-		circuit.set('prop.nested', 1);
-		expect(circuit.face.prop.nested).to.equal(1);
+		circuit.set('prop', true);
+		expect(circuit.face.prop).to.be.true;
 		
-		circuit.set('prop.nested', 2);
-		expect(circuit.face.prop.nested).to.equal(2);
+		circuit.set('nested.prop', 1);
+		expect(circuit.face.nested.prop).to.equal(1);
+		
+		circuit.set('nested.prop', 2);
+		expect(circuit.face.nested.prop).to.equal(2);
 		
 	});
 	
@@ -120,6 +154,21 @@ describe('Bacon.Circuit', function () {
 		
 		expect(onWatch).to.have.been.calledTwice;
 		expect(onWatch).to.have.always.been.calledWithExactly(2);
+		
+	});
+	
+	it("has a `watch` method that can register callbacks for changes on properties that only exist in the future", function (done) {
+		
+		var face = {};
+		var circuit = new Bacon.Circuit(face, {});
+		
+		circuit.watch('prop', function (value) {
+			expect(value).to.equal('first value');
+			
+			done();
+		});
+		
+		face.prop = 'first value';
 		
 	});
 	

@@ -1,6 +1,5 @@
 if (typeof exports === 'object')
 	Bacon = require('baconjs');
-
 ;!function () { 'use strict';
 
 function Circuit(face) {
@@ -18,35 +17,31 @@ function Circuit(face) {
 	flattenArray(fieldsObjs).map(function (fieldsObj) {
 		return unnestKeys(fieldsObj);
 	}).forEach(function (fieldsObj) {
-		for (var key in fieldsObj) {
-			if (!fieldsObj.hasOwnProperty(key)) continue;
-			fields[key] = fieldsObj[key];
-		}
+		Object.keys(fieldsObj).forEach(function (key) {
+			if (fieldsObj[key] instanceof Bacon.Field)
+				fields[key] = fieldsObj[key];
+		});
 	});
 	
+	var keys = Object.keys(fields);
+
 	var context = {};
 	
-	for (var key in fields) {
-		if (!fields.hasOwnProperty(key)) continue;
-		if (fields[key] instanceof Bacon.Field)
-			// TODO: Making this an actual getter-setter is a bit pointless
-			// for this scenario, but ah well doesn't really hurt either.
-			setObjectProp(context, key, fields[key].observable());
-	}
+	keys.forEach(function (key) {
+		// TODO: Making this an actual getter-setter is a bit pointless for
+		// this scenario, but ah well doesn't really hurt either.
+		setObjectProp(context, key, fields[key].observable());
+	});
 	
-	for (var key in fields) {
-		if (!fields.hasOwnProperty(key)) continue;
-		if (fields[key] instanceof Bacon.Field)
-			fields[key].start(context, key, circuit);
-	}
+	keys.forEach(function (key) {
+		fields[key].start(context, key, circuit);
+	});
 	
-	for (var key in fields) {
-		if (!fields.hasOwnProperty(key)) continue;
-		if (fields[key] instanceof Bacon.Field)
-			fields[key].observable().subscribe(function (event) {
-				circuit.onEvent(key, fields[key].observable(), event);
-			});
-	}
+	keys.forEach(function (key) {
+		fields[key].observable().subscribe(function (event) {
+			circuit.onEvent(key, fields[key].observable(), event);
+		});
+	});
 }
 
 Circuit.prototype.set = function (key, value) {
@@ -54,14 +49,13 @@ Circuit.prototype.set = function (key, value) {
 	return this;
 };
 Circuit.prototype.watch = function (key, cb) {
+	setObjectProp(this.face, key);
 	var leaf = findLeaf(this.face, key);
 	var desc = Object.getOwnPropertyDescriptor(leaf.object, leaf.key);
-	// TODO: This assumes that we have already defined a property.
 	desc.set.listeners.push(cb);
 	return this;
 };
 Circuit.prototype.onEvent = function () {};
-Circuit.prototype.promiseConstructor = undefined;
 
 function findLeaf(obj, path, create) {
 	var keys = path.split('.');
@@ -109,7 +103,8 @@ function setObjectProp(obj, path, value) {
 		
 	}
 	
-	leaf.object[leaf.key] = value;
+	if (arguments.length > 2)
+		leaf.object[leaf.key] = value;
 }
 
 function unnestKeys(obj, path) {
@@ -171,7 +166,7 @@ function Field(setup, Type) {
 		if (result instanceof Bacon.Property)
 			result = result.toEventStream();
 		if (result instanceof Bacon.EventStream)
-			bus.plug(result);
+			bus.plug(result.delay(0));
 		
 		delete this.start;
 		
@@ -197,7 +192,9 @@ Field.stream.expose = Field.property.expose = function (setup) {
 };
 
 Field.stream.function = function (flatMapLatest) {
-	flatMapLatest = flatMapLatest || function () {};
+	flatMapLatest = flatMapLatest || function () {
+		return arguments;
+	};
 	return this(function (name, circuit) {
 		var context = this;
 		return Bacon.fromBinder(function (sink) {
@@ -205,9 +202,15 @@ Field.stream.function = function (flatMapLatest) {
 				var stream = Bacon.once(arguments).flatMapLatest(function (args) {
 					return flatMapLatest.apply(context, args);
 				});
-				sink(new Bacon.Next(stream));
-				if (circuit.promiseConstructor)
-					return stream.firstToPromise(circuit.promiseConstructor);
+				
+				if (!circuit.promiseConstructor) {
+					sink(new Bacon.Next(stream));
+					return;
+				}
+				
+				return new circuit.promiseConstructor(function (resolve, reject) {
+					sink(new Bacon.Next(stream.doAction(resolve).doError(reject)));
+				});
 			});
 			return function () {};
 		}).flatMapLatest(function (stream) {
@@ -246,3 +249,5 @@ Field.property.watch = function (merge) {
 Bacon.Field = Field;
 
 }();
+if (typeof exports === 'object')
+	module.exports = Bacon;

@@ -5,9 +5,10 @@ var gulp = require('gulp'),
 gulp.task('js', function () {
 
 	return gulp.src([
-		'src/core.js',
+		'src/node/require.js',
 		'src/circuit.js',
-		'src/field.js'
+		'src/field.js',
+		'src/node/exports.js'
 	]).pipe(
 		gulpConcat('bacon.circuit.js')
 	).pipe(

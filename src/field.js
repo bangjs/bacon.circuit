@@ -19,7 +19,7 @@ function Field(setup, Type) {
 		if (result instanceof Bacon.Property)
 			result = result.toEventStream();
 		if (result instanceof Bacon.EventStream)
-			bus.plug(result);
+			bus.plug(result.delay(0));
 		
 		delete this.start;
 		
@@ -45,7 +45,9 @@ Field.stream.expose = Field.property.expose = function (setup) {
 };
 
 Field.stream.function = function (flatMapLatest) {
-	flatMapLatest = flatMapLatest || function () {};
+	flatMapLatest = flatMapLatest || function () {
+		return arguments;
+	};
 	return this(function (name, circuit) {
 		var context = this;
 		return Bacon.fromBinder(function (sink) {
@@ -53,9 +55,15 @@ Field.stream.function = function (flatMapLatest) {
 				var stream = Bacon.once(arguments).flatMapLatest(function (args) {
 					return flatMapLatest.apply(context, args);
 				});
-				sink(new Bacon.Next(stream));
-				if (circuit.promiseConstructor)
-					return stream.firstToPromise(circuit.promiseConstructor);
+				
+				if (!circuit.promiseConstructor) {
+					sink(new Bacon.Next(stream));
+					return;
+				}
+				
+				return new circuit.promiseConstructor(function (resolve, reject) {
+					sink(new Bacon.Next(stream.doAction(resolve).doError(reject)));
+				});
 			});
 			return function () {};
 		}).flatMapLatest(function (stream) {
