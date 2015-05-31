@@ -1,6 +1,6 @@
 {
   "name": "bacon.circuit",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Bacon.js plugin for easily constructing stateful software components as a set of interconnected observables",
   "main": "dist/bacon.circuit.js",
   "scripts": {
