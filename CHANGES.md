@@ -1,3 +1,10 @@
+### 0.1.3
+:sparkles: Monday 1 June 2015
+
+* Default promise constructor to make functions return promises out of the box on Node.js.
+* Some improvements in README.
+
+
 ### 0.1.2
 :sparkles: Sunday 31 May 2015
 
