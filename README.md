@@ -27,6 +27,10 @@ Bacon.Circuit.prototype.onEvent = function (name, observable, event) {
 	console.log(name, '=', event.constructor.name, event.hasValue() && event.value());
 };
 
+// Note that in environments where the native `Promise` does not exist, a
+// promise constructor needs to be defined in `Bacon.Circuit.prototype.
+// promiseConstructor` to enable functions to return promises.
+
 new Bacon.Circuit(module.exports, {
 	
 	config: {
@@ -36,7 +40,7 @@ new Bacon.Circuit(module.exports, {
 		}),
 		
 		searchTerm: Bacon.Field.property.watch(function () {
-			return Bacon.once("");
+			return Bacon.once("").debounce(100);
 		})
 		
 	},
@@ -97,7 +101,7 @@ var ds = require('./mydatasource.js');
 
 // Changing this property (and `config.searchTerm`) triggers that items will be
 // refetched from server.
-ds.config.order = 'DESC';
+ds.config.order = "DESC";
 
 // Function that returns a promise (same for `update` and `delete`).
 ds.create({ id: 42, name: "Tim" }).done(function (response) {
@@ -130,4 +134,4 @@ Bacon.Circuit was created by [Tim Molendijk](https://twitter.com/timmolendijk) a
 
 Contributing to Bacon.Circuit is encouraged. I would love to hear about your use case. Feel free to [email me](https://github.com/bangjs/bacon.circuit/blob/master/package.json#L22) or send in issues or pull requests.
 
-Bacon.Circuit has been published under [MIT license](http://timmolendijk.mit-license.org/) and its release history [has been documented here](https://github.com/bangjs/bacon.circuit/blob/master/CHANGES.md).
+Bacon.Circuit has been published under [MIT license](http://timmolendijk.mit-license.org/) and its [release history has been documented here](https://github.com/bangjs/bacon.circuit/blob/master/CHANGES.md).

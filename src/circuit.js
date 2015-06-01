@@ -54,6 +54,7 @@ Circuit.prototype.watch = function (key, cb) {
 	return this;
 };
 Circuit.prototype.onEvent = function () {};
+Circuit.prototype.promiseConstructor = typeof Promise === 'function' && Promise;
 
 function findLeaf(obj, path, create) {
 	var keys = path.split('.');
