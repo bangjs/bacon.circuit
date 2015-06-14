@@ -1,5 +1,3 @@
-;!function () { 'use strict';
-
 function Circuit(face) {
 	// Calling without arguments can be done if we want to skip initialization
 	// during inheritance.
@@ -16,7 +14,7 @@ function Circuit(face) {
 		return unnestKeys(fieldsObj);
 	}).forEach(function (fieldsObj) {
 		Object.keys(fieldsObj).forEach(function (key) {
-			if (fieldsObj[key] instanceof Bacon.Field)
+			if (fieldsObj[key] instanceof Bacon.Circuit.Field)
 				fields[key] = fieldsObj[key];
 		});
 	});
@@ -32,13 +30,13 @@ function Circuit(face) {
 	});
 	
 	keys.forEach(function (key) {
-		fields[key].start(context, key, circuit);
-	});
-	
-	keys.forEach(function (key) {
 		fields[key].observable().subscribe(function (event) {
 			circuit.onEvent(key, fields[key].observable(), event);
 		});
+	});
+
+	keys.forEach(function (key) {
+		fields[key].start(context, key, circuit);
 	});
 }
 
@@ -116,7 +114,7 @@ function unnestKeys(obj, path) {
 		var keyPath = path.slice();
 		keyPath.push(key);
 		
-		if (obj[key] instanceof Bacon.Field) {
+		if (obj[key] instanceof Bacon.Circuit.Field) {
 			flat[keyPath.join('.')] = obj[key];
 			continue;
 		}
@@ -142,5 +140,3 @@ function flattenArray(array) {
 }
 
 Bacon.Circuit = Circuit;
-
-}();

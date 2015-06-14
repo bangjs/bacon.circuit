@@ -1,27 +1,44 @@
-describe('Bacon.Field', function () {
+describe('Bacon.Circuit.Field', function () {
 	
 	it("instantiates field that delivers observable of specified type or `Bacon.Property` if not provided", function () {
 		
-		var field = new Bacon.Field(_.noop, Bacon.EventStream);
+		var field = new Bacon.Circuit.Field(_.noop, Bacon.EventStream);
 		expect(field.observable()).to.be.instanceof(Bacon.EventStream);
-
-		var field = new Bacon.Field(_.noop, Bacon.Property);
+	
+		var field = new Bacon.Circuit.Field(_.noop, Bacon.Property);
 		expect(field.observable()).to.be.instanceof(Bacon.Property);
-
-		var field = new Bacon.Field(_.noop);
+	
+		var field = new Bacon.Circuit.Field(_.noop);
 		expect(field.observable()).to.be.instanceof(Bacon.Property);
 		
 	});
 	
 	it("delivers observable that never automatically ends", function (done) {
 		
-		var field = new Bacon.Field(function () {
+		var field = new Bacon.Circuit.Field(function () {
 			return Bacon.once(true);
-		}).start().observable().subscribe(function (event) {
+		});
+		
+		field.observable().subscribe(function (event) {
 			assert(!event.isEnd() && event.value() === true);
 			
 			done();
 		});
+		
+		field.start();
+		
+	});
+	
+	it("can be started as soon as its observable has been subscribed to", function () {
+		
+		var field = new Bacon.Circuit.Field();
+		
+		expect(field).not.to.have.property('start');
+		
+		field.observable().subscribe(_.noop);
+		
+		expect(field).to.have.property('start').
+			that.is.a('function');
 		
 	});
 	
@@ -29,10 +46,10 @@ describe('Bacon.Field', function () {
 		
 		var onSetup = sinon.spy();
 		
-		var field = new Bacon.Field(onSetup);
+		var field = new Bacon.Circuit.Field(onSetup);
 		expect(onSetup).to.have.not.been.called;
 		
-		field.observable();
+		field.observable().subscribe(_.noop);
 		expect(onSetup).to.have.not.been.called;
 		
 		field.start();
@@ -40,28 +57,49 @@ describe('Bacon.Field', function () {
 		
 	});
 	
-	it("calls setup with the parameters that were provided upon start", function (done) {
+	it("calls setup with sink function and the parameters that were provided upon start", function (done) {
 		
 		var a = {}, b = 'b', c = true;
 		
-		var field = new Bacon.Field(function (name, circuit) {
+		var field = new Bacon.Circuit.Field(function (sink, name, circuit) {
 			expect(this).to.equal(a);
+			expect(sink).to.be.a('function');
 			expect(name).to.equal(b);
 			expect(circuit).to.equal(c);
 			
 			done();
 		});
 		
+		field.observable().subscribe(_.noop);
+		
 		field.start(a, b, c);
+		
+	});
+	
+	it("emits sunk values as events in generated observable", function (done) {
+		
+		var field = new Bacon.Circuit.Field(function (sink) {
+			sink(1);
+		});
+		
+		field.observable().onValue(function (value) {
+			expect(value).to.equal(1);
+			
+			done();
+		});
+		
+		field.start();
 		
 	});
 	
 	it("dismisses setup return value if not an observable of any sort", function (done) {
 		
+		var never = new Bacon.Circuit.Field(function () {
+			return "ignore me";
+		});
+		
 		Bacon.mergeAll(
-			new Bacon.Field(function () {
-				return 'ignore me';
-			}).start().observable(),
+			never.observable(),
 			Bacon.once('first')
 		).onValue(function (value) {
 			expect(value).to.equal('first');
@@ -69,15 +107,17 @@ describe('Bacon.Field', function () {
 			done();
 		});
 		
+		never.start();
+		
 	});
 	
 });
 
-describe("Bacon.Field.stream.expose", function () {
+describe("Bacon.Circuit.Field.stream.expose", function () {
 	
 	it("assigns stream observable to circuit upon setup", function (done) {
 		
-		var field = Bacon.Field.stream.expose(function (name) {
+		var field = Bacon.Circuit.Field.stream.expose(function (sink, name) {
 			expect(circuit.set).
 				to.have.been.calledOnce.
 				to.have.been.calledWithExactly(name, field.observable());
@@ -88,43 +128,46 @@ describe("Bacon.Field.stream.expose", function () {
 		var circuit = {
 			set: sinon.spy()
 		};
+		field.observable().subscribe(_.noop);
 		field.start({}, 'propName', circuit);
 		
 	});
 	
 });
 
-describe("Bacon.Field.stream.function", function () {
+describe("Bacon.Circuit.Field.stream.function", function () {
 	
 	it("assigns function to circuit upon setup", function (done) {
 		
-		Bacon.Field.stream.function().
-		start({}, 'propName', {
+		var field = Bacon.Circuit.Field.stream.function();
+		
+		field.observable().subscribe(_.noop);
+		
+		field.start({}, 'propName', {
 			set: function (name, fn) {
 				expect(fn).to.be.a.function;
 				expect(fn()).to.be.undefined;
 				
 				done();
 			}
-		}).
-		observable().
-		subscribe(_.noop);
+		});
 		
 	});
 	
 	it("returns a promise with event value from a function call if a promise constructor is provided", function (done) {
 		
-		Bacon.Field.stream.function().
-		start({}, 'propName', {
+		var field = Bacon.Circuit.Field.stream.function();
+		
+		field.observable().subscribe(_.noop);
+		
+		field.start({}, 'propName', {
 			set: function (name, fn) {
 				assert(Q.isPromise(fn()));
 				
 				done();
 			},
 			promiseConstructor: Q.Promise
-		}).
-		observable().
-		subscribe(_.noop);
+		});
 		
 	});
 	
@@ -132,21 +175,21 @@ describe("Bacon.Field.stream.function", function () {
 		
 		var invoke;
 		
-		var stream = Bacon.Field.stream.function().
-			start({}, 'propName', {
-				set: function (name, fn) {
-					invoke = fn;
-				}
-			}).
-			observable();
+		var field = Bacon.Circuit.Field.stream.function();
 		
-		expect(invoke).to.be.undefined;
-		
-		stream.onValue(function (value) {
+		field.observable().onValue(function (value) {
 			expect(value).to.be.arguments;
 			expect(_.toArray(value)).to.deep.equal([1, 2, 3]);
 			
 			done();
+		});
+		
+		expect(invoke).to.be.undefined;
+		
+		field.start({}, 'propName', {
+			set: function (name, fn) {
+				invoke = fn;
+			}
 		});
 		
 		expect(invoke).to.be.a.function;
@@ -159,7 +202,7 @@ describe("Bacon.Field.stream.function", function () {
 		
 		var onValue = sinon.spy();
 		
-		Bacon.Field.stream.function(function () {
+		var field = Bacon.Circuit.Field.stream.function(function () {
 			var args = _.toArray(arguments);
 			return Bacon.once(args).startWith(args.map(function (n) {
 				return n * n;
@@ -168,14 +211,9 @@ describe("Bacon.Field.stream.function", function () {
 					return sum + plus;
 				}, 0);
 			});
-		}).
-		start({}, 'propName', {
-			set: function (name, fn) {
-				fn(1, 2, 3);
-			}
-		}).
-		observable().
-		onValue(function () {
+		});
+		
+		field.observable().onValue(function () {
 			onValue.apply(this, arguments);
 			
 			if (onValue.calledTwice) {
@@ -186,14 +224,23 @@ describe("Bacon.Field.stream.function", function () {
 			}
 		});
 		
+		field.start({}, 'propName', {
+			set: function (name, fn) {
+				fn(1, 2, 3);
+			}
+		});
+		
 	});
 	
 	it("resolves promise with first event after invocation", function (done) {
 		
-		Bacon.Field.stream.function(function (arg) {
+		var field = Bacon.Circuit.Field.stream.function(function (arg) {
 			return Bacon.fromArray([arg, !arg]);
-		}).
-		start({}, 'propName', {
+		});
+		
+		field.observable().subscribe(_.noop);
+		
+		field.start({}, 'propName', {
 			set: function (name, fn) {
 				fn(true).done(function (value) {
 					expect(value).to.be.true;
@@ -202,9 +249,7 @@ describe("Bacon.Field.stream.function", function () {
 				});
 			},
 			promiseConstructor: Q.Promise
-		}).
-		observable().
-		subscribe(_.noop);
+		});
 		
 	});
 	
@@ -212,19 +257,20 @@ describe("Bacon.Field.stream.function", function () {
 		
 		var onValue = sinon.spy();
 		
-		Bacon.Field.stream.function(function (value) {
+		var field = Bacon.Circuit.Field.stream.function(function (value) {
 			if (value === 1) return Bacon.later(50, 'drop me').startWith(value);
 			return Bacon.once(value);
-		}).
-		start({}, 'propName', {
+		});
+		
+		field.observable().onValue(onValue);
+		
+		field.start({}, 'propName', {
 			set: function (name, fn) {
 				fn(1);
 				fn(2);
 				_.delay(fn, 100, 3);
 			}
-		}).
-		observable().
-		onValue(onValue);
+		});
 		
 		_.delay(function () {
 			expect(onValue.firstCall).to.have.been.calledWithExactly(1);
@@ -240,19 +286,20 @@ describe("Bacon.Field.stream.function", function () {
 		
 		var onValue = sinon.spy();
 		
-		Bacon.Field.stream.function(function (value) {
+		var field = Bacon.Circuit.Field.stream.function(function (value) {
 			if (value === 1) return Bacon.later(50, 'drop me').startWith(value);
 			return Bacon.once(value);
-		}).
-		start({}, 'propName', {
+		});
+		
+		field.observable().onValue(onValue);
+		
+		field.start({}, 'propName', {
 			set: function (name, fn) {
 				fn(1);
 				_.delay(fn, 0, 2);
 				_.delay(fn, 100, 3);
 			}
-		}).
-		observable().
-		onValue(onValue);
+		});
 		
 		_.delay(function () {
 			expect(onValue.firstCall).to.have.been.calledWithExactly(1);
@@ -268,20 +315,21 @@ describe("Bacon.Field.stream.function", function () {
 		
 		var onValue = sinon.spy();
 		
-		Bacon.Field.stream.function(function (value) {
+		var field = Bacon.Circuit.Field.stream.function(function (value) {
 			if (value === 1) return Bacon.later(200, 'drop me').startWith(value); 
 			if (value === 2) return Bacon.never();
 			return Bacon.once(value);
-		}).
-		start({}, 'propName', {
+		});
+		
+		field.observable().onValue(onValue);
+		
+		field.start({}, 'propName', {
 			set: function (name, fn) {
 				fn(1);
 				_.delay(fn, 50, 2);
 				_.delay(fn, 400, 3);
 			}
-		}).
-		observable().
-		onValue(onValue);
+		});
 		
 		_.delay(function () {
 			expect(onValue.firstCall).to.have.been.calledWithExactly(1);
@@ -294,87 +342,122 @@ describe("Bacon.Field.stream.function", function () {
 	
 });
 
-describe("Bacon.Field.property.digest", function () {
+describe("Bacon.Circuit.Field.property.digest", function () {
 	
-	it("assigns every value of property observable to circuit", function () {
+	it("assigns every value of property observable to circuit", function (done) {
 		
 		var onSet = sinon.spy();
 		
-		Bacon.Field.property.digest(function () {
+		var field = Bacon.Circuit.Field.property.digest(function () {
 			return Bacon.once(2).startWith(1);
-		}).
-		start({}, 'propName', {
-			set: onSet
-		}).
-		observable().
-		onValue(_.noop);
+		});
 		
-		expect(onSet.firstCall).to.have.been.calledWithExactly('propName', 1);
-		expect(onSet.secondCall).to.have.been.calledWithExactly('propName', 2);
+		field.observable().onValue(function (value) {
+			if (value < 2) return;
+			
+			expect(onSet.firstCall).to.have.been.calledWithExactly('propName', 1);
+			expect(onSet.secondCall).to.have.been.calledWithExactly('propName', 2);
+			
+			done();
+		});
+		
+		field.start({}, 'propName', {
+			set: onSet
+		});
+
+	});
+	
+	it("digests sunk values just as values from returned streams", function (done) {
+		
+		var field = Bacon.Circuit.Field.property.digest(function (sink) {
+			sink(1);
+		});
+		
+		field.observable().onValue(_.noop);
+		
+		field.start({}, 'propName', {
+			set: function (key, value) {
+				expect(value).to.equal(1);
+				
+				done();
+			}
+		});
 		
 	});
 	
 });
 
-describe("Bacon.Field.property.watch", function () {
+describe("Bacon.Circuit.Field.property.watch", function () {
 	
 	it("watches and reports changes of value on circuit", function (done) {
 		
-		Bacon.Field.property.watch().
-		start({}, 'propName', {
+		var field = Bacon.Circuit.Field.property.watch();
+		
+		field.observable().onValue(function (value) {
+			expect(value).to.equal(1);
+			
+			done();
+		});
+		
+		field.start({}, 'propName', {
 			watch: function (name, cb) {
 				cb(1);
 			},
 			set: function () {}
-		}).
-		observable().
-		onValue(function (value) {
-			expect(value).to.equal(1);
-			
-			done();
 		});
 		
 	});
 	
 	it("will merge the provided observable before the watch stream", function (done) {
 		
-		Bacon.Field.property.watch(function () {
+		var onSet = sinon.spy();
+
+		var field = Bacon.Circuit.Field.property.watch(function () {
 			return Bacon.once(1);
-		}).
-		start({}, 'propName', {
-			watch: function (name, cb) {
-				cb(2);
-			},
-			set: function () {}
-		}).
-		observable().
-		onValue(function (value) {
-			expect(value).to.equal(1);
+		});
+		
+		field.observable().onValue(function (value) {
+			if (value < 2) return;
+
+			expect(onSet.firstCall).to.have.been.calledWithExactly('propName', 1);
+			expect(onSet.secondCall).to.have.been.calledWithExactly('propName', 2);
 			
 			done();
 		});
 		
+		field.start({}, 'propName', {
+			watch: function (name, cb) {
+				cb(2);
+			},
+			set: onSet
+		});
+		
 	});
 	
-	it("assigns every value of property observable to circuit", function () {
-		
+	it("assigns every value of property observable to circuit", function (done) {
+
 		var onSet = sinon.spy();
 		
-		Bacon.Field.property.watch(function () {
+		var field = Bacon.Circuit.Field.property.watch(function () {
 			return Bacon.once(2).startWith(1);
-		}).
-		start({}, 'propName', {
+		});
+		
+		field.observable().onValue(function (value) {
+			if (value < 3) return;
+
+			expect(onSet.firstCall).to.have.been.calledWithExactly('propName', 1);
+			expect(onSet.secondCall).to.have.been.calledWithExactly('propName', 2);
+			expect(onSet.thirdCall).to.have.been.calledWithExactly('propName', 3);
+			
+			done();
+		});
+		
+		field.start({}, 'propName', {
 			watch: function (name, cb) {
 				cb(3);
 			},
 			set: onSet
-		}).
-		observable().
-		onValue(_.noop);
-		
-		expect(onSet.firstCall).to.have.been.calledWithExactly('propName', 1);
-		expect(onSet.secondCall).to.have.been.calledWithExactly('propName', 2);
-		expect(onSet.thirdCall).to.have.been.calledWithExactly('propName', 3);
+		});
 		
 	});
 	
@@ -385,21 +468,9 @@ describe("Bacon.Field.property.watch", function () {
 		var o1 = {},
 			o2 = {};
 		
-		Bacon.Field.property.watch().
-		start({}, 'propName', {
-			watch: function (name, cb) {
-				cb(undefined);
-				cb(1);
-				cb(1);
-				cb(2);
-				cb(1);
-				cb(o1);
-				cb(o2);
-			},
-			set: function () {}
-		}).
-		observable().
-		onValue(function () {
+		var field = Bacon.Circuit.Field.property.watch();
+		
+		field.observable().onValue(function () {
 			onValue.apply(this, arguments);
 			
 			if (onValue.callCount === 6) {
@@ -412,6 +483,19 @@ describe("Bacon.Field.property.watch", function () {
 				
 				done();
 			}
+		});
+		
+		field.start({}, 'propName', {
+			watch: function (name, cb) {
+				cb(undefined);
+				cb(1);
+				cb(1);
+				cb(2);
+				cb(1);
+				cb(o1);
+				cb(o2);
+			},
+			set: function () {}
 		});
 		
 	});

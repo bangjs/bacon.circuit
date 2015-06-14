@@ -1,6 +1,14 @@
-if (typeof exports === 'object')
-	Bacon = require('baconjs');
-;!function () { 'use strict';
+;!function (root, factory) {
+	if (typeof define === 'function' && define.amd)
+		define(['bacon'], function (Bacon) {
+			return factory(Bacon);
+		});
+	else if (typeof exports === 'object')
+		module.exports = factory(require('baconjs'));
+	else
+		factory(root.Bacon);
+}(this, function (Bacon) {
+'use strict';
 
 function Circuit(face) {
 	// Calling without arguments can be done if we want to skip initialization
@@ -18,7 +26,7 @@ function Circuit(face) {
 		return unnestKeys(fieldsObj);
 	}).forEach(function (fieldsObj) {
 		Object.keys(fieldsObj).forEach(function (key) {
-			if (fieldsObj[key] instanceof Bacon.Field)
+			if (fieldsObj[key] instanceof Bacon.Circuit.Field)
 				fields[key] = fieldsObj[key];
 		});
 	});
@@ -34,13 +42,13 @@ function Circuit(face) {
 	});
 	
 	keys.forEach(function (key) {
-		fields[key].start(context, key, circuit);
-	});
-	
-	keys.forEach(function (key) {
 		fields[key].observable().subscribe(function (event) {
 			circuit.onEvent(key, fields[key].observable(), event);
 		});
+	});
+
+	keys.forEach(function (key) {
+		fields[key].start(context, key, circuit);
 	});
 }
 
@@ -118,7 +126,7 @@ function unnestKeys(obj, path) {
 		var keyPath = path.slice();
 		keyPath.push(key);
 		
-		if (obj[key] instanceof Bacon.Field) {
+		if (obj[key] instanceof Bacon.Circuit.Field) {
 			flat[keyPath.join('.')] = obj[key];
 			continue;
 		}
@@ -144,35 +152,49 @@ function flattenArray(array) {
 }
 
 Bacon.Circuit = Circuit;
-
-}();
-;!function () { 'use strict';
-
 function Field(setup, Type) {
-	var bus = new Bacon.Bus();
 	
-	var observable = bus.toProperty();
-	if (Type === Bacon.EventStream) 
-		observable = observable.toEventStream();
+	var observable = Bacon.fromBinder(function (sink) {
+		function asyncSink(value) {
+			setTimeout(function () {
+				sink(value);
+			});
+		}
+		
+		this.start = function (context, name, circuit) {
+			var result = setup.call(context, asyncSink, name, circuit);
+			
+			if (result instanceof Bacon.Bus)
+				result = result.toProperty();
+			if (result instanceof Bacon.Property)
+				result = result.toEventStream();
+			if (result instanceof Bacon.EventStream)
+				result.subscribe(asyncSink);
+			
+			delete this.start;
+			return this;
+		};
+		
+		return function () {};
+		
+	}.bind(this));
+	
+	var doAction = function () {};
+	this.doAction = function (fn) {
+		doAction = fn;
+	};
+	
+	observable = observable.doAction(function () {
+		doAction.apply(this, arguments);
+	});
+	
+	if (Type !== Bacon.EventStream)
+		observable = observable.toProperty();
 	
 	this.observable = function () {
 		return observable;
 	};
-	
-	this.start = function (context, name, circuit) {
-		var result = setup.call(context, name, circuit);
-		
-		if (result instanceof Bacon.Bus)
-			result = result.toProperty();
-		if (result instanceof Bacon.Property)
-			result = result.toEventStream();
-		if (result instanceof Bacon.EventStream)
-			bus.plug(result.delay(0));
-		
-		delete this.start;
-		
-		return this;
-	};
+
 }
 
 Field.stream = function (setup) {
@@ -184,10 +206,9 @@ Field.property = function (setup) {
 };
 
 Field.stream.expose = Field.property.expose = function (setup) {
-	var field = this(function (name, circuit) {
-		var context = this;
+	var field = this(function (sink, name, circuit) {
 		circuit.set(name, field.observable());
-		return setup.apply(context, arguments);
+		return setup.apply(this, arguments);
 	});
 	return field;
 };
@@ -196,21 +217,21 @@ Field.stream.function = function (flatMapLatest) {
 	flatMapLatest = flatMapLatest || function () {
 		return arguments;
 	};
-	return this(function (name, circuit) {
+	return this(function (sink, name, circuit) {
 		var context = this;
-		return Bacon.fromBinder(function (sink) {
+		return Bacon.fromBinder(function (latest) {
 			circuit.set(name, function () {
 				var stream = Bacon.once(arguments).flatMapLatest(function (args) {
 					return flatMapLatest.apply(context, args);
 				});
 				
 				if (!circuit.promiseConstructor) {
-					sink(new Bacon.Next(stream));
+					latest(new Bacon.Next(stream));
 					return;
 				}
 				
 				return new circuit.promiseConstructor(function (resolve, reject) {
-					sink(new Bacon.Next(stream.doAction(resolve).doError(reject)));
+					latest(new Bacon.Next(stream.doAction(resolve).doError(reject)));
 				});
 			});
 			return function () {};
@@ -221,25 +242,25 @@ Field.stream.function = function (flatMapLatest) {
 };
 
 Field.property.digest = function (setup) {
-	return this(function (name, circuit) {
-		var context = this;
-		return setup.apply(context, arguments).doAction(function (value) {
+	var field = this(function (sink, name, circuit) {
+		field.doAction(function (value) {
 			circuit.set(name, value);
 		});
+		return setup.apply(this, arguments);
 	});
+	return field;
 };
 
 Field.property.watch = function (merge) {
 	merge = merge || function () {
 		return Bacon.never();
 	};
-	return this.digest(function (name, circuit) {
-		var context = this;
+	return this.digest(function (sink, name, circuit) {
 		return Bacon.mergeAll(
-			merge.call(context),
-			Bacon.fromBinder(function (sink) {
+			merge.call(this),
+			Bacon.fromBinder(function (watched) {
 				circuit.watch(name, function (value) {
-					sink(new Bacon.Next(value));
+					watched(new Bacon.Next(value));
 				});
 				return function () {};
 			})
@@ -247,8 +268,10 @@ Field.property.watch = function (merge) {
 	});
 };
 
-Bacon.Field = Field;
+Bacon.Circuit.Field = Field;
 
-}();
-if (typeof exports === 'object')
-	module.exports = Bacon;
+Bacon.EventStream.field = Field.stream;
+Bacon.Property.field = Field.property;
+
+return Bacon.Circuit;
+});
