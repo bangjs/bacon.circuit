@@ -70,13 +70,13 @@ new Bacon.Circuit(module.exports, {
 		});
 	}),
 	
-	create: Bacon.EventStream.field.function(function (data) {
+	create: Bacon.EventStream.field.method(function (data) {
 		return Bacon.fromNodeCallback(
 			request.post(ENDPOINT + 'post').send(data), 'end'
 		).map('.body');
 	}),
 	
-	update: Bacon.EventStream.field.function(function (item, data) {
+	update: Bacon.EventStream.field.method(function (item, data) {
 		if (!item) return item;
 		
 		return Bacon.fromNodeCallback(
@@ -84,7 +84,7 @@ new Bacon.Circuit(module.exports, {
 		).map('.body');
 	}),
 	
-	delete: Bacon.EventStream.field.function(function (item) {
+	delete: Bacon.EventStream.field.method(function (item) {
 		if (!item) return item;
 		
 		return Bacon.fromNodeCallback(

@@ -135,11 +135,11 @@ describe("Bacon.Circuit.Field.stream.expose", function () {
 	
 });
 
-describe("Bacon.Circuit.Field.stream.function", function () {
+describe("Bacon.Circuit.Field.stream.method", function () {
 	
 	it("assigns function to circuit upon setup", function (done) {
 		
-		var field = Bacon.Circuit.Field.stream.function();
+		var field = Bacon.Circuit.Field.stream.method();
 		
 		field.observable().subscribe(_.noop);
 		
@@ -156,7 +156,7 @@ describe("Bacon.Circuit.Field.stream.function", function () {
 	
 	it("returns a promise with event value from a function call if a promise constructor is provided", function (done) {
 		
-		var field = Bacon.Circuit.Field.stream.function();
+		var field = Bacon.Circuit.Field.stream.method();
 		
 		field.observable().subscribe(_.noop);
 		
@@ -175,7 +175,7 @@ describe("Bacon.Circuit.Field.stream.function", function () {
 		
 		var invoke;
 		
-		var field = Bacon.Circuit.Field.stream.function();
+		var field = Bacon.Circuit.Field.stream.method();
 		
 		field.observable().onValue(function (value) {
 			expect(value).to.be.arguments;
@@ -202,7 +202,7 @@ describe("Bacon.Circuit.Field.stream.function", function () {
 		
 		var onValue = sinon.spy();
 		
-		var field = Bacon.Circuit.Field.stream.function(function () {
+		var field = Bacon.Circuit.Field.stream.method(function () {
 			var args = _.toArray(arguments);
 			return Bacon.once(args).startWith(args.map(function (n) {
 				return n * n;
@@ -234,7 +234,7 @@ describe("Bacon.Circuit.Field.stream.function", function () {
 	
 	it("resolves promise with first event after invocation", function (done) {
 		
-		var field = Bacon.Circuit.Field.stream.function(function (arg) {
+		var field = Bacon.Circuit.Field.stream.method(function (arg) {
 			return Bacon.fromArray([arg, !arg]);
 		});
 		
@@ -257,7 +257,7 @@ describe("Bacon.Circuit.Field.stream.function", function () {
 		
 		var onValue = sinon.spy();
 		
-		var field = Bacon.Circuit.Field.stream.function(function (value) {
+		var field = Bacon.Circuit.Field.stream.method(function (value) {
 			if (value === 1) return Bacon.later(50, 'drop me').startWith(value);
 			return Bacon.once(value);
 		});
@@ -286,7 +286,7 @@ describe("Bacon.Circuit.Field.stream.function", function () {
 		
 		var onValue = sinon.spy();
 		
-		var field = Bacon.Circuit.Field.stream.function(function (value) {
+		var field = Bacon.Circuit.Field.stream.method(function (value) {
 			if (value === 1) return Bacon.later(50, 'drop me').startWith(value);
 			return Bacon.once(value);
 		});
@@ -315,7 +315,7 @@ describe("Bacon.Circuit.Field.stream.function", function () {
 		
 		var onValue = sinon.spy();
 		
-		var field = Bacon.Circuit.Field.stream.function(function (value) {
+		var field = Bacon.Circuit.Field.stream.method(function (value) {
 			if (value === 1) return Bacon.later(200, 'drop me').startWith(value); 
 			if (value === 2) return Bacon.never();
 			return Bacon.once(value);

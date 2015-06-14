@@ -59,7 +59,7 @@ Field.stream.expose = Field.property.expose = function (setup) {
 	return field;
 };
 
-Field.stream.function = function (flatMapLatest) {
+Field.stream.method = function (flatMapLatest) {
 	flatMapLatest = flatMapLatest || function () {
 		return arguments;
 	};
