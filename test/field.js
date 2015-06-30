@@ -57,13 +57,14 @@ describe('Bacon.Circuit.Field', function () {
 		
 	});
 	
-	it("calls setup with sink function and the parameters that were provided upon start", function (done) {
+	it("calls setup with sink callback, observable and the parameters that were provided upon start", function (done) {
 		
 		var a = {}, b = 'b', c = true;
 		
-		var field = new Bacon.Circuit.Field(function (sink, name, circuit) {
+		var field = new Bacon.Circuit.Field(function (sink, me, name, circuit) {
 			expect(this).to.equal(a);
 			expect(sink).to.be.a('function');
+			expect(me).to.equal(field.observable());
 			expect(name).to.equal(b);
 			expect(circuit).to.equal(c);
 			
@@ -117,7 +118,7 @@ describe("Bacon.Circuit.Field.stream.expose", function () {
 	
 	it("assigns stream observable to circuit upon setup", function (done) {
 		
-		var field = Bacon.Circuit.Field.stream.expose(function (sink, name) {
+		var field = Bacon.Circuit.Field.stream.expose(function (sink, me, name) {
 			expect(circuit.set).
 				to.have.been.calledOnce.
 				to.have.been.calledWithExactly(name, field.observable());
@@ -408,7 +409,7 @@ describe("Bacon.Circuit.Field.property.watch", function () {
 		
 	});
 	
-	it("will merge the provided observable before the watch stream", function (done) {
+	it("will merge the provided observable with (and before) the watch stream", function (done) {
 		
 		var onSet = sinon.spy();
 
@@ -434,6 +435,32 @@ describe("Bacon.Circuit.Field.property.watch", function () {
 		
 	});
 	
+	it("will merge sunk values with (and before) the watch stream", function (done) {
+		
+		var onSet = sinon.spy();
+
+		var field = Bacon.Circuit.Field.property.watch(function (sink) {
+			sink(1);
+		});
+		
+		field.observable().onValue(function (value) {
+			if (value < 2) return;
+
+			expect(onSet.firstCall).to.have.been.calledWithExactly('propName', 1);
+			expect(onSet.secondCall).to.have.been.calledWithExactly('propName', 2);
+			
+			done();
+		});
+		
+		field.start({}, 'propName', {
+			watch: function (name, cb) {
+				cb(2);
+			},
+			set: onSet
+		});
+		
+	});
+
 	it("assigns every value of property observable to circuit", function (done) {
 
 		var onSet = sinon.spy();

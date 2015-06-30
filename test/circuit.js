@@ -1,18 +1,20 @@
 describe('Bacon.Circuit', function () {
 	
-	it("installs all provided fields with created context, name and circuit instance", function () {
+	it("installs all provided fields with created context, sink function, its own observable, name and circuit instance", function () {
 		
 		var onSetup = sinon.spy(function () {
 			expect(this.a).to.be.instanceof(Bacon.Observable);
 			expect(this.b).to.be.instanceof(Bacon.Observable);
 		});
 		
+		var a = new Bacon.Circuit.Field(onSetup);
+
 		var circuit = new Bacon.Circuit({}, {
-			a: new Bacon.Circuit.Field(onSetup),
+			a: a,
 			b: new Bacon.Circuit.Field(_.noop)
 		});
 		
-		expect(onSetup).to.have.been.calledWithExactly(sinon.match.func, 'a', circuit);
+		expect(onSetup).to.have.been.calledWithExactly(sinon.match.func, a.observable(), 'a', circuit);
 		
 	});
 	

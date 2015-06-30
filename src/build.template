@@ -1,9 +1,5 @@
 ;!function (root, factory) {
-	if (typeof define === 'function' && define.amd)
-		define(['bacon'], function (Bacon) {
-			return factory(Bacon);
-		});
-	else if (typeof exports === 'object')
+	if (typeof exports === 'object')
 		module.exports = factory(require('baconjs'));
 	else
 		factory(root.Bacon);

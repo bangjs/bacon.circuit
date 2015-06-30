@@ -1,9 +1,5 @@
 ;!function (root, factory) {
-	if (typeof define === 'function' && define.amd)
-		define(['bacon'], function (Bacon) {
-			return factory(Bacon);
-		});
-	else if (typeof exports === 'object')
+	if (typeof exports === 'object')
 		module.exports = factory(require('baconjs'));
 	else
 		factory(root.Bacon);
@@ -162,7 +158,7 @@ function Field(setup, Type) {
 		}
 		
 		this.start = function (context, name, circuit) {
-			var result = setup.call(context, asyncSink, name, circuit);
+			var result = setup.call(context, asyncSink, this.observable(), name, circuit);
 			
 			if (result instanceof Bacon.Bus)
 				result = result.toProperty();
@@ -206,18 +202,17 @@ Field.property = function (setup) {
 };
 
 Field.stream.expose = Field.property.expose = function (setup) {
-	var field = this(function (sink, name, circuit) {
-		circuit.set(name, field.observable());
+	return this(function (sink, me, name, circuit) {
+		circuit.set(name, me);
 		return setup.apply(this, arguments);
 	});
-	return field;
 };
 
 Field.stream.method = function (flatMapLatest) {
 	flatMapLatest = flatMapLatest || function () {
 		return arguments;
 	};
-	return this(function (sink, name, circuit) {
+	return this(function (sink, me, name, circuit) {
 		var context = this;
 		return Bacon.fromBinder(function (latest) {
 			circuit.set(name, function () {
@@ -242,7 +237,7 @@ Field.stream.method = function (flatMapLatest) {
 };
 
 Field.property.digest = function (setup) {
-	var field = this(function (sink, name, circuit) {
+	var field = this(function (sink, me, name, circuit) {
 		field.doAction(function (value) {
 			circuit.set(name, value);
 		});
@@ -252,12 +247,11 @@ Field.property.digest = function (setup) {
 };
 
 Field.property.watch = function (merge) {
-	merge = merge || function () {
-		return Bacon.never();
-	};
-	return this.digest(function (sink, name, circuit) {
+	return this.digest(function (sink, me, name, circuit) {
+		merge = merge && merge.call(this, sink, me, name, circuit);
+		merge = merge || Bacon.never();
 		return Bacon.mergeAll(
-			merge.call(this),
+			merge,
 			Bacon.fromBinder(function (watched) {
 				circuit.watch(name, function (value) {
 					watched(new Bacon.Next(value));

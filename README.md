@@ -2,7 +2,7 @@
 
 Bacon.js plugin for easily constructing stateful software components as a set of interconnected observables.
 
-Adds `Circuit` type to the core `Bacon` library object.
+Adds `Circuit` and `Circuit.Field` types to the core `Bacon` library object. Exposes field factory methods at `Circuit.Field.stream(.…)` and `Circuit.Property.property(.…)`, also available at `Bacon.EventStream.field(.…)` and `Bacon.Property.field(.…)` respectively.
 
 
 ## Overview
