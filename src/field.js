@@ -2,6 +2,7 @@ function Field(setup, Type) {
 	
 	var observable = Bacon.fromBinder(function (sink) {
 		function asyncSink(value) {
+			if (value instanceof Bacon.Event && value.isEnd()) return;
 			setTimeout(function () {
 				sink(value);
 			});

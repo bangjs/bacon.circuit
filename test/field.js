@@ -15,18 +15,20 @@ describe('Bacon.Circuit.Field', function () {
 	
 	it("delivers observable that never automatically ends", function (done) {
 		
-		var field = new Bacon.Circuit.Field(function () {
-			return Bacon.once(true);
+		var field = new Bacon.Circuit.Field(function (sink) {
+			sink(1);
+			_.delay(sink, 100, 3);
+			return Bacon.constant(2);
 		});
-		
-		field.observable().subscribe(function (event) {
-			assert(!event.isEnd() && event.value() === true);
+
+		field.observable().subscribe(_.after(3, function (event) {
+			assert(!event.isEnd() && event.value() === 3);
 			
 			done();
-		});
+		}));
 		
 		field.start();
-		
+
 	});
 	
 	it("can be started as soon as its observable has been subscribed to", function () {
@@ -37,8 +39,7 @@ describe('Bacon.Circuit.Field', function () {
 		
 		field.observable().subscribe(_.noop);
 		
-		expect(field).to.have.property('start').
-			that.is.a('function');
+		expect(field).to.have.property('start').that.is.a('function');
 		
 	});
 	
