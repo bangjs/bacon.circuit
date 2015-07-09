@@ -248,7 +248,7 @@ Field.property.digest = function (setup) {
 };
 
 Field.property.watch = function (merge) {
-	return this.digest(function (sink, me, name, circuit) {
+	return this(function (sink, me, name, circuit) {
 		merge = merge && merge.call(this, sink, me, name, circuit);
 		merge = merge || Bacon.never();
 		return Bacon.mergeAll(
@@ -259,7 +259,9 @@ Field.property.watch = function (merge) {
 				});
 				return function () {};
 			})
-		).skipDuplicates();
+		).skipDuplicates().doAction(function (value) {
+			circuit.set(name, value);
+		});
 	});
 };
 

@@ -3,7 +3,7 @@ _Tuesday 7 July 2015_
 
 * Introduce `sink` function as argument to field setup function. This essentially turns Bacon.Circuit into a framework for reactive programming, with *optional* functional operators. In other words; any field can now be implemented using nothing but subscribe (= read) and sink (= write) calls.
 * Also pass observable instance as argument to field setup function, as a convenience to enable a field to subscribe to itself (useful for implementing side-effects) without having to parse its own name.
-* Reorganize of CommonJS module: now exports `Bacon.Circuit` with field constructor at `Bacon.Circuit.Field` (and corresponding factory methods under `Bacon.EventStream.field` and `Bacon.Property.field`.
+* Reorganization of CommonJS module: now exports `Bacon.Circuit` with field constructor at `Bacon.Circuit.Field` (and corresponding factory methods under `Bacon.EventStream.field` and `Bacon.Property.field`).
 * Rename function as stream factory method from `function` to `method` to prevent reserved term issues in older ECMAScripts and to improve readability – no more `function(function () {…})`.
 * Improve build process.
 * Fix test that verifies that field observables never end.

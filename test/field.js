@@ -527,5 +527,9 @@ describe("Bacon.Circuit.Field.property.watch", function () {
 		});
 		
 	});
+
+	// TODO: Test that the infinite loop that could be created when
+	// implementation still used `property.digest` internally, no longer can
+	// occur given the current approach.
 	
 });
