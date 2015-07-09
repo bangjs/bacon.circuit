@@ -1,3 +1,9 @@
+### 0.2.1 :sparkles:
+_Thursday 9 July 2015_
+
+* Fix bug in `watch` caused by superfluous asynchronicity (heh the irony).
+
+
 ### 0.2.0 :dizzy:
 _Tuesday 7 July 2015_
 
