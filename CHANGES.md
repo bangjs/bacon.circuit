@@ -1,3 +1,10 @@
+### 0.2.2 :sparkles:
+_Sunday 30 August 2015_
+
+* Fix bug in `watch` that resulted in incorrect order of events that were sunk from merge function and duplicate event values when they were from merge function versus circuit watch.
+* Minor tweak in NPM package configuration.
+
+
 ### 0.2.1 :sparkles:
 _Thursday 9 July 2015_
 
