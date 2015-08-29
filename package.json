@@ -6,7 +6,7 @@
   "scripts": {
     "test": "npm run test-node && npm run test-karma",
     "test-node": "mocha -r test/conf/node.js",
-    "test-karma": "./node_modules/karma/bin/karma start test/conf/karma.js",
+    "test-karma": "karma start test/conf/karma.js",
     "build": "gulp"
   },
   "repository": {

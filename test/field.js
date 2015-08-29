@@ -93,6 +93,23 @@ describe('Bacon.Circuit.Field', function () {
 		field.start();
 		
 	});
+
+	it("emits sunk values and returned stream values in order of appearance", function (done) {
+
+		var field = new Bacon.Circuit.Field(function (sink) {
+			sink(1);
+			return Bacon.once(2);
+		});
+
+		field.observable().onValue(_.after(2, function (value) {
+			expect(value).to.equal(2);
+
+			done();
+		}));
+
+		field.start();
+
+	});
 	
 	it("dismisses setup return value if not an observable of any sort", function (done) {
 		
@@ -496,7 +513,10 @@ describe("Bacon.Circuit.Field.property.watch", function () {
 		var o1 = {},
 			o2 = {};
 		
-		var field = Bacon.Circuit.Field.property.watch();
+		var field = Bacon.Circuit.Field.property.watch(function (sink) {
+			sink(undefined);
+			return Bacon.once(1).startWith(undefined);
+		});
 		
 		field.observable().onValue(function () {
 			onValue.apply(this, arguments);
@@ -505,7 +525,7 @@ describe("Bacon.Circuit.Field.property.watch", function () {
 				expect(onValue.getCall(0)).to.have.been.calledWithExactly(undefined);
 				expect(onValue.getCall(1)).to.have.been.calledWithExactly(1);
 				expect(onValue.getCall(2)).to.have.been.calledWithExactly(2);
-				expect(onValue.getCall(3)).to.have.been.calledWithExactly(1);
+				expect(onValue.getCall(3)).to.have.been.calledWithExactly(undefined);
 				expect(onValue.getCall(4)).to.have.been.calledWithExactly(o1);
 				expect(onValue.getCall(5)).to.have.been.calledWithExactly(o2);
 				
@@ -515,11 +535,10 @@ describe("Bacon.Circuit.Field.property.watch", function () {
 		
 		field.start({}, 'propName', {
 			watch: function (name, cb) {
-				cb(undefined);
 				cb(1);
 				cb(1);
 				cb(2);
-				cb(1);
+				cb(undefined);
 				cb(o1);
 				cb(o2);
 			},
@@ -528,8 +547,4 @@ describe("Bacon.Circuit.Field.property.watch", function () {
 		
 	});
 
-	// TODO: Test that the infinite loop that could be created when
-	// implementation still used `property.digest` internally, no longer can
-	// occur given the current approach.
-	
 });
