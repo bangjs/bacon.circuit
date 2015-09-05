@@ -1,3 +1,9 @@
+### 0.2.3 :sparkles:
+_Sunday 6 September 2015_
+
+* Fix bug in `watch` that resulted its merge callback from not being invoked with the right context (`this`).
+
+
 ### 0.2.2 :sparkles:
 _Sunday 30 August 2015_
 
