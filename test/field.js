@@ -452,7 +452,30 @@ describe("Bacon.Circuit.Field.property.watch", function () {
 		});
 		
 	});
-	
+
+	it("calls merge with sink callback, observable and the parameters that were provided upon start", function (done) {
+		
+		var a = {}, b = 'b', c = {
+			watch: _.noop,
+			set: _.noop
+		};
+		
+		var field = Bacon.Circuit.Field.property.watch(function (sink, me, name, circuit) {
+			expect(this).to.equal(a);
+			expect(sink).to.be.a('function');
+			expect(me).to.equal(field.observable());
+			expect(name).to.equal(b);
+			expect(circuit).to.equal(c);
+			
+			done();
+		});
+		
+		field.observable().subscribe(_.noop);
+		
+		field.start(a, b, c);
+		
+	});
+
 	it("will merge sunk values with (and before) the watch stream", function (done) {
 		
 		var onSet = sinon.spy();
