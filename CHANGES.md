@@ -1,3 +1,10 @@
+### 0.2.4 :sparkles:
+_Monday 5 October 2015_
+
+* Expose circuit context on circuit instances.
+* Fix bug that made properties on circuit context non-enumerable.
+
+
 ### 0.2.3 :sparkles:
 _Sunday 6 September 2015_
 
