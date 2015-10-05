@@ -23,12 +23,12 @@ function Circuit(face) {
 	
 	var keys = Object.keys(fields);
 
-	var context = {};
+	circuit.context = {};
 	
 	keys.forEach(function (key) {
 		// TODO: Making this an actual getter-setter is a bit pointless for
 		// this scenario, but ah well doesn't really hurt either.
-		setObjectProp(context, key, fields[key].observable());
+		setObjectProp(circuit.context, key, fields[key].observable());
 	});
 	
 	keys.forEach(function (key) {
@@ -39,6 +39,10 @@ function Circuit(face) {
 		fields[key].observable().subscribe(function (event) {
 			circuit.onEvent(key, fields[key].observable(), event);
 		});
+	});
+
+	keys.forEach(function (key) {
+		fields[key].start(circuit.context, key, circuit);
 	});
 }
 
@@ -93,7 +97,7 @@ function setObjectProp(obj, path, value) {
 		
 		Object.defineProperty(leaf.object, leaf.key, {
 			configurable: true,
-			enumberable: true,
+			enumerable: true,
 			get: function () {
 				return value;
 			},
