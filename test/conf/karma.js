@@ -5,7 +5,7 @@ module.exports = function(config) {
   config.set({
 
     // base path that will be used to resolve all patterns (eg. files, exclude)
-    basePath: '',
+    basePath: '../..',
 
 
     // frameworks to use
@@ -19,6 +19,10 @@ module.exports = function(config) {
       'node_modules/q/q.js',
       'node_modules/baconjs/dist/Bacon.js',
       
+      // TODO: Apply a preprocessor to these source files to parse them into
+      // `src/build.template` and end up with a library that resembles
+      // `dist/bacon.circuit.js` more closely (wrapped in closure and in strict
+      // mode).
       'src/*.js',
       
       'test/*.js'

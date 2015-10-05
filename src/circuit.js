@@ -1,5 +1,3 @@
-;!function () { 'use strict';
-
 function Circuit(face) {
 	// Calling without arguments can be done if we want to skip initialization
 	// during inheritance.
@@ -16,7 +14,7 @@ function Circuit(face) {
 		return unnestKeys(fieldsObj);
 	}).forEach(function (fieldsObj) {
 		Object.keys(fieldsObj).forEach(function (key) {
-			if (fieldsObj[key] instanceof Bacon.Field)
+			if (fieldsObj[key] instanceof Bacon.Circuit.Field)
 				fields[key] = fieldsObj[key];
 		});
 	});
@@ -29,10 +27,6 @@ function Circuit(face) {
 		// TODO: Making this an actual getter-setter is a bit pointless for
 		// this scenario, but ah well doesn't really hurt either.
 		setObjectProp(circuit.context, key, fields[key].observable());
-	});
-	
-	keys.forEach(function (key) {
-		fields[key].start(context, key, circuit);
 	});
 	
 	keys.forEach(function (key) {
@@ -120,7 +114,7 @@ function unnestKeys(obj, path) {
 		var keyPath = path.slice();
 		keyPath.push(key);
 		
-		if (obj[key] instanceof Bacon.Field) {
+		if (obj[key] instanceof Bacon.Circuit.Field) {
 			flat[keyPath.join('.')] = obj[key];
 			continue;
 		}
@@ -146,5 +140,3 @@ function flattenArray(array) {
 }
 
 Bacon.Circuit = Circuit;
-
-}();

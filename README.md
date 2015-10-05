@@ -2,7 +2,7 @@
 
 Bacon.js plugin for easily constructing stateful software components as a set of interconnected observables.
 
-Adds `Circuit` and `Field` types to the core `Bacon` library object.
+Adds `Circuit` and `Circuit.Field` types to the core `Bacon` library object. Exposes field factory methods at `Circuit.Field.stream(.…)` and `Circuit.Property.property(.…)`, also available at `Bacon.EventStream.field(.…)` and `Bacon.Property.field(.…)` respectively.
 
 
 ## Overview
@@ -11,14 +11,15 @@ Functional reactive programming (FRP) with [Bacon.js](https://baconjs.github.io)
 
 But as always with great power comes great responsibility and that is where Bacon.Circuit comes in. Consider it a circuit board of observable fields that collectively represent a piece of behavior and a corresponding state.
 
-It offers a basic framework for constructing a stateful software component based on observables, which keeps you away from common FRP pitfalls _(hi there lazy evaluation)_ and makes it plain simple to integrate your component with other (possibly non-streaming) elements of your software by automatically generating a programming interface made up of conventional constructs such as getters, setters and methods. 
+It offers a basic framework for constructing a stateful software component based on observables, which keeps you away from common FRP pitfalls _(hi there lazy evaluation)_ and makes it plain simple to integrate your component with other (possibly non-streaming) elements of your software by automatically generating a programming interface made up of conventional constructs such as getters, setters and methods.
 
 Take this example of your typical data source module. A Node.js environment is assumed here, but it works in the browser in the same way.
 
 ```js
 // mydatasource.js
 
-var Bacon = require('bacon.circuit');
+var Bacon = require('baconjs');
+require('bacon.circuit');
 
 var request = require('superagent');
 var ENDPOINT = 'http://httpbin.org/';
@@ -27,7 +28,7 @@ Bacon.Circuit.prototype.onEvent = function (name, observable, event) {
 	console.log(name, '=', event.constructor.name, event.hasValue() && event.value());
 };
 
-// Note that in environments where the native `Promise` does not exist, a
+// Note that in environments where a native ES6 `Promise` does not exist, a
 // promise constructor needs to be defined in `Bacon.Circuit.prototype.
 // promiseConstructor` to enable functions to return promises.
 
@@ -35,28 +36,28 @@ new Bacon.Circuit(module.exports, {
 	
 	config: {
 		
-		order: Bacon.Field.property.watch(function () {
+		order: Bacon.Property.field.watch(function () {
 			return Bacon.once("ASC");
 		}),
 		
-		searchTerm: Bacon.Field.property.watch(function () {
+		searchTerm: Bacon.Property.field.watch(function () {
 			return Bacon.once("").debounce(100);
 		})
 		
 	},
 	
-	issueQuery: Bacon.Field.stream(function () {
+	issueQuery: Bacon.EventStream.field(function () {
 		return Bacon.combineTemplate({
 			order: this.config.order,
 			q: this.config.searchTerm
 		});
 	}),
 	
-	value: Bacon.Field.property.digest(function () {
+	value: Bacon.Property.field.digest(function () {
 		return this.observeValue;
 	}),
 	
-	observeValue: Bacon.Field.property.expose(function () {
+	observeValue: Bacon.Property.field.expose(function () {
 		return Bacon.combineWith(
 			function (params) {
 				return params;
@@ -69,13 +70,13 @@ new Bacon.Circuit(module.exports, {
 		});
 	}),
 	
-	create: Bacon.Field.stream.function(function (data) {
+	create: Bacon.EventStream.field.method(function (data) {
 		return Bacon.fromNodeCallback(
 			request.post(ENDPOINT + 'post').send(data), 'end'
 		).map('.body');
 	}),
 	
-	update: Bacon.Field.stream.function(function (item, data) {
+	update: Bacon.EventStream.field.method(function (item, data) {
 		if (!item) return item;
 		
 		return Bacon.fromNodeCallback(
@@ -83,7 +84,7 @@ new Bacon.Circuit(module.exports, {
 		).map('.body');
 	}),
 	
-	delete: Bacon.Field.stream.function(function (item) {
+	delete: Bacon.EventStream.field.method(function (item) {
 		if (!item) return item;
 		
 		return Bacon.fromNodeCallback(
@@ -97,14 +98,14 @@ new Bacon.Circuit(module.exports, {
 Now we can use this module as follows:
 
 ```js
-var ds = require('./mydatasource.js');
+var ds = require('./mydatasource');
 
 // Changing this property (and `config.searchTerm`) triggers that items will be
 // refetched from server.
 ds.config.order = "DESC";
 
 // Function that returns a promise (same for `update` and `delete`).
-ds.create({ id: 42, name: "Tim" }).done(function (response) {
+ds.create({ id: 42, name: "Tim" }).then(function (response) {
 	// ...
 }, function (err) {
 	// ...

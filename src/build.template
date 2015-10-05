@@ -1,0 +1,12 @@
+;!function (root, factory) {
+	if (typeof exports === 'object')
+		module.exports = factory(require('baconjs'));
+	else
+		factory(root.Bacon);
+}(this, function (Bacon) {
+'use strict';
+
+<%= source %>
+
+return Bacon.Circuit;
+});

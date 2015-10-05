@@ -1,12 +1,12 @@
 {
   "name": "bacon.circuit",
-  "version": "0.1.3",
+  "version": "0.2.3",
   "description": "Bacon.js plugin for easily constructing stateful software components as a set of interconnected observables",
   "main": "dist/bacon.circuit.js",
   "scripts": {
     "test": "npm run test-node && npm run test-karma",
-    "test-node": "mocha -r test/node/require.js",
-    "test-karma": "./node_modules/karma/bin/karma start",
+    "test-node": "mocha -r test/conf/node.js",
+    "test-karma": "karma start test/conf/karma.js",
     "build": "gulp"
   },
   "repository": {
@@ -35,10 +35,11 @@
     "karma": "^0.12.32",
     "karma-mocha": "^0.1.10",
     "karma-sinon-chai": "^0.3.0",
-    "lodash": "^3.9.2",
+    "lodash": "^3.9.3",
     "mocha": "^2.2.5",
     "q": "^1.4.1",
     "sinon": "^1.14.1",
-    "sinon-chai": "^2.7.0"
+    "sinon-chai": "^2.7.0",
+    "through2": "^2.0.0"
   }
 }
